@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facial Feature Extraction</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        .hero-section {
+            height: 100vh;
+            background: url('https://via.placeholder.com/1920x1080') no-repeat center center/cover;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+        }
+        .hero-section h1 {
+            font-size: 4em;
+            margin: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-step {
+            display: none;
+        }
+        .form-step.active {
+            display: block;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 10px 0;
+            font-size: 1em;
+            color: white;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .button:disabled {
+            background-color: #cccccc;
+        }
+        .features {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .features .feature {
+            width: 45%;
+            margin: 2.5%;
+            padding: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="hero-section">
+        <div>
+            <h1>Welcome to Facial Feature Extraction</h1>
+            <p>Extract and analyze your facial features with our state-of-the-art technology.</p>
+        </div>
+    </div>
+    <div class="container">
+        <form id="featureForm">
+            <div class="form-step active" id="step1">
+                <h2>Step 1: Enter Your Name</h2>
+                <input type="text" id="name" placeholder="Enter your name" required>
+                <button type="button" class="button" onclick="nextStep()">Next</button>
+            </div>
+            <div class="form-step" id="step2">
+                <h2>Step 2: Capture Your Image</h2>
+                <p><button type="button" class="button" onclick="openCamera()">Open Camera</button></p>
+                <video id="video" width="100%" height="auto" autoplay></video>
+                <p><button type="button" class="button" onclick="captureImage()">Capture Image</button></p>
+            </div>
+            <div class="form-step" id="step3">
+                <h2>Step 3: Your Facial Features</h2>
+                <div class="features" id="features"></div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function nextStep() {
+            let currentStep = document.querySelector('.form-step.active');
+            let nextStep = currentStep.nextElementSibling;
+
+            if (nextStep) {
+                currentStep.classList.remove('active');
+                nextStep.classList.add('active');
+            }
+        }
+
+        function openCamera() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    document.getElementById('video').srcObject = stream;
+                })
+                .catch(error => {
+                    console.error("Error accessing camera: ", error);
+                });
+        }
+
+        function captureImage() {
+            const video = document.getElementById('video');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+
+            canvas.toBlob(blob => {
+                const formData = new FormData();
+                formData.append('image', blob, 'captured_image.png');
+
+                fetch('http://127.0.0.1:5000/predict', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    displayFeatures(data);
+                    nextStep();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }, 'image/png');
+        }
+
+        function displayFeatures(data) {
+            const featuresDiv = document.getElementById('features');
+            featuresDiv.innerHTML = `
+                <div class="feature">Skin Disease: ${data.skin_disease}</div>
+                <div class="feature">Face Shape: ${data.face_shape}</div>
+                <div class="feature">Gender: ${data.gender}</div>
+                <div class="feature">Skin Tone: ${data.skin_tone}</div>
+                <div class="feature">Forehead Length: ${data.forehead_length.toFixed(2)} mm</div>
+                <div class="feature">Face Length: ${data.face_length.toFixed(2)} mm</div>
+                <div class="feature">Jawline Length: ${data.jawline_length.toFixed(2)} mm</div>
+                <div class="feature">Cheek Length: ${data.cheek_length.toFixed(2)} mm</div>
+            `;
+        }
+    </script>
+</body>
+</html>
